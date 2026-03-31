@@ -98,8 +98,21 @@ func main() {
 
 func initStorage(cfg *config.Config) (storage.Client, error) {
 	if cfg.Storage.Endpoint == "" {
+		slog.Info("storage: no endpoint configured, using local filesystem", "path", "./uploads")
 		return storage.NewLocalClient("./uploads")
 	}
+
+	// Log config summary to help diagnose connection/auth issues
+	accessKeyMasked := cfg.Storage.AccessKey
+	if len(accessKeyMasked) > 4 {
+		accessKeyMasked = accessKeyMasked[:4] + "****"
+	}
+	slog.Info("storage: connecting to minio",
+		"endpoint", cfg.Storage.Endpoint,
+		"bucket", cfg.Storage.Bucket,
+		"use_ssl", cfg.Storage.UseSSL,
+		"access_key", accessKeyMasked,
+	)
 
 	client, err := storage.NewMinIOClient(
 		cfg.Storage.Endpoint,
@@ -118,5 +131,6 @@ func initStorage(cfg *config.Config) (storage.Client, error) {
 		return nil, err
 	}
 
+	slog.Info("storage: bucket ready", "bucket", cfg.Storage.Bucket)
 	return client, nil
 }

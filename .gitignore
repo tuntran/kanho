@@ -86,6 +86,7 @@ worktrees/
 
 # Go
 vendor/
+/server
 
 # Kanho config with secrets
 config.yaml
