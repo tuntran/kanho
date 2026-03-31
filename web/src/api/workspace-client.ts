@@ -20,3 +20,14 @@ export async function listWorkspaces(): Promise<Workspace[]> {
   const { data } = await apiClient.get<Workspace[]>("/workspaces/");
   return data;
 }
+
+export interface CreateWorkspaceInput {
+  name: string;
+  description?: string;
+  accent_color?: string;
+}
+
+export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
+  const { data } = await apiClient.post<Workspace>("/workspaces/", input);
+  return data;
+}
