@@ -4,13 +4,13 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:
-      KANHO_DATABASE_URL: postgres://kanho:kanho@postgres:5432/kanho?sslmode=disable
+      KANHO_DATABASE_URL: postgres://${POSTGRES_USER:-kanho}:${POSTGRES_PASSWORD:-kanho}@postgres:5432/${POSTGRES_DB:-kanho}?sslmode=disable
       KANHO_STORAGE_ENDPOINT: minio:9000
-      KANHO_STORAGE_ACCESS_KEY: minioadmin
-      KANHO_STORAGE_SECRET_KEY: minioadmin
-      KANHO_STORAGE_BUCKET: kanho
-      KANHO_STORAGE_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}/kanho
-      KANHO_JWT_SECRET: change-me-in-production
+      KANHO_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      KANHO_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      KANHO_STORAGE_BUCKET: ${KANHO_STORAGE_BUCKET:-kanho}
+      KANHO_STORAGE_PUBLIC_URL: ${KANHO_STORAGE_PUBLIC_URL:-http://localhost:${MINIO_PORT:-9000}/kanho}
+      KANHO_JWT_SECRET: ${KANHO_JWT_SECRET:-change-me-in-production}
     depends_on:
       postgres:
         condition: service_healthy
@@ -20,15 +20,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: kanho
-      POSTGRES_PASSWORD: kanho
-      POSTGRES_DB: kanho
+      POSTGRES_USER: ${POSTGRES_USER:-kanho}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kanho}
+      POSTGRES_DB: ${POSTGRES_DB:-kanho}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kanho"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanho}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,8 +37,8 @@ services:
     image: minio/minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_CORS_ALLOW_ORIGIN: "*"
       MINIO_SERVER_URL: ${MINIO_SERVER_URL:-}
     volumes:
