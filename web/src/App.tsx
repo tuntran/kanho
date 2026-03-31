@@ -9,17 +9,8 @@ import { BoardPage } from "@/pages/board/board-page";
 import { CardDrawer } from "@/components/drawer/card-drawer";
 import { SearchDialog } from "@/components/search/search-dialog";
 import { ToastProvider } from "@/components/ui/toast";
-
-function DashboardPlaceholder() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-text-1">Kanho</h1>
-        <p className="mt-2 text-text-2">Kanban project management</p>
-      </div>
-    </div>
-  );
-}
+import { WorkspaceSelectorPage } from "@/pages/workspace/workspace-selector-page";
+import { CreateWorkspacePage } from "@/pages/onboarding/create-workspace-page";
 
 export default function App() {
   useSilentRefresh();
@@ -39,7 +30,9 @@ export default function App() {
           <Route path="/w/:workspaceSlug/b/:boardId" element={<BoardPage />}>
             <Route path="cards/:cardNumber" element={<CardDrawer />} />
           </Route>
-          <Route path="/*" element={<DashboardPlaceholder />} />
+          {/* TODO: view tạm — thay bằng proper dashboard khi có design */}
+          <Route path="/" element={<WorkspaceSelectorPage />} />
+          <Route path="/onboarding/create-workspace" element={<CreateWorkspacePage />} />
         </Route>
       </Routes>
       <SearchDialog isOpen={searchOpen} onClose={closeSearch} />
