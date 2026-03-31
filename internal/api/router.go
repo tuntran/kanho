@@ -58,6 +58,11 @@ func NewRouter(db *pgxpool.Pool, storageClient storage.Client, staticFS fs.FS, c
 
 			r.Get("/setup/status", authHandler.SetupStatus)
 
+			// WebSocket endpoint — outside JWTAuth group because browsers cannot set
+			// custom headers for WS; token is validated via ?token= query param in ws.Handler.
+			wsHandler := ws.NewHandler(wsHub, cfg.JWT.Secret)
+			r.Get("/boards/{boardID}/ws", wsHandler.ServeHTTP)
+
 			// Protected API routes
 			r.Group(func(r chi.Router) {
 				r.Use(mw.JWTAuth(cfg.JWT.Secret))
@@ -91,7 +96,6 @@ func NewRouter(db *pgxpool.Pool, storageClient storage.Client, staticFS fs.FS, c
 				cardHandler := handler.NewCardHandler(cardSvc)
 				commentHandler := handler.NewCommentHandler(commentSvc)
 				searchHandler := handler.NewSearchHandler(cardRepo)
-				wsHandler := ws.NewHandler(wsHub, cfg.JWT.Secret)
 
 				// Workspaces
 				r.Route("/workspaces", func(r chi.Router) {
@@ -148,8 +152,7 @@ func NewRouter(db *pgxpool.Pool, storageClient storage.Client, staticFS fs.FS, c
 					r.Get("/cards", cardHandler.List)
 					r.Post("/cards", cardHandler.Create)
 
-					// WebSocket
-					r.Get("/ws", wsHandler.ServeHTTP)
+					// WebSocket is registered outside JWTAuth group (handles auth via ?token= query param)
 				})
 
 				// Attachments
