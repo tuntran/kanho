@@ -11,6 +11,7 @@ import { SearchDialog } from "@/components/search/search-dialog";
 import { ToastProvider } from "@/components/ui/toast";
 import { WorkspaceSelectorPage } from "@/pages/workspace/workspace-selector-page";
 import { CreateWorkspacePage } from "@/pages/onboarding/create-workspace-page";
+import { WorkspaceDashboardPage } from "@/pages/workspace/workspace-dashboard-page";
 
 export default function App() {
   useSilentRefresh();
@@ -30,7 +31,7 @@ export default function App() {
           <Route path="/w/:workspaceSlug/b/:boardId" element={<BoardPage />}>
             <Route path="cards/:cardNumber" element={<CardDrawer />} />
           </Route>
-          {/* TODO: view tạm — thay bằng proper dashboard khi có design */}
+          <Route path="/w/:workspaceSlug" element={<WorkspaceDashboardPage />} />
           <Route path="/" element={<WorkspaceSelectorPage />} />
           <Route path="/onboarding/create-workspace" element={<CreateWorkspacePage />} />
         </Route>

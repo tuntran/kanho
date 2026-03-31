@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createWorkspace, workspaceKeys } from "@/api/workspace-client";
+import { createProject, listProjectBoards } from "@/api/project-client";
 import { toast } from "@/components/ui/toast";
+
+function generateProjectKey(name: string): string {
+  return name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || "PRJ";
+}
 
 const ACCENT_COLORS = [
   { hex: "#6366f1", label: "Indigo" },
@@ -19,17 +24,28 @@ export function CreateWorkspacePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState<string>(ACCENT_COLORS[0].hex);
   const [nameError, setNameError] = useState("");
+  const [workspaceSlug, setWorkspaceSlug] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [projectKey, setProjectKey] = useState("");
+  const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
+
+  useEffect(() => {
+    if (!keyManuallyEdited) {
+      setProjectKey(generateProjectKey(projectName));
+    }
+  }, [projectName, keyManuallyEdited]);
 
   const mutation = useMutation({
     mutationFn: createWorkspace,
     onSuccess: (workspace) => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.list });
-      navigate(`/w/${workspace.slug}`, { replace: true });
+      setWorkspaceSlug(workspace.slug);
+      setStep(3);
     },
     onError: () => toast.error("Không thể tạo workspace. Vui lòng thử lại."),
   });
@@ -46,6 +62,29 @@ export function CreateWorkspacePage() {
     mutation.mutate({ name: name.trim(), description: description.trim() || undefined, accent_color: accentColor });
   }
 
+  const keyError =
+    projectKey.length > 0 && !/^[A-Z]{2,10}$/.test(projectKey)
+      ? "Key phải gồm 2–10 chữ cái in hoa (A-Z)"
+      : "";
+
+  const createProjectMutation = useMutation({
+    mutationFn: () =>
+      createProject(workspaceSlug, {
+        name: projectName.trim(),
+        key: projectKey.trim(),
+      }),
+    onSuccess: async (project) => {
+      const boards = await listProjectBoards(workspaceSlug, project.id);
+      const firstBoard = boards[0];
+      if (firstBoard) {
+        navigate(`/w/${workspaceSlug}/b/${firstBoard.id}`, { replace: true });
+      } else {
+        navigate(`/w/${workspaceSlug}`, { replace: true });
+      }
+    },
+    onError: () => toast.error("Không thể tạo project. Vui lòng thử lại."),
+  });
+
   const initial = name.trim()[0]?.toUpperCase() ?? "K";
 
   return (
@@ -54,12 +93,72 @@ export function CreateWorkspacePage() {
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-6">
           <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-          <div className={`h-0.5 w-16 ${step === 2 ? "bg-primary" : "bg-border"}`} />
-          <div className={`h-2.5 w-2.5 rounded-full border-2 ${step === 2 ? "bg-primary border-primary" : "border-border"}`} />
-          <span className="ml-2 text-xs text-text-2">Bước {step} / 2</span>
+          <div className={`h-0.5 w-16 ${step >= 2 ? "bg-primary" : "bg-border"}`} />
+          <div className={`h-2.5 w-2.5 rounded-full border-2 ${step >= 2 ? "bg-primary border-primary" : "border-border"}`} />
+          <div className={`h-0.5 w-16 ${step >= 3 ? "bg-primary" : "bg-border"}`} />
+          <div className={`h-2.5 w-2.5 rounded-full border-2 ${step >= 3 ? "bg-primary border-primary" : "border-border"}`} />
+          <span className="ml-2 text-xs text-text-2">Bước {step} / 3</span>
         </div>
 
-        {step === 1 ? (
+        {step === 3 ? (
+          <>
+            <h1 className="text-xl font-bold text-text-1">Tạo project đầu tiên</h1>
+            <p className="mt-1 mb-6 text-sm text-text-2">Tổ chức công việc theo project</p>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="proj-name" className="block text-sm font-medium text-text-1 mb-1">
+                  Tên project <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="proj-name"
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Ví dụ: Website Redesign"
+                  className="w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm text-text-1 placeholder:text-text-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="proj-key" className="block text-sm font-medium text-text-1 mb-1">
+                  Key
+                </label>
+                <input
+                  id="proj-key"
+                  type="text"
+                  value={projectKey}
+                  onChange={(e) => {
+                    setProjectKey(e.target.value.toUpperCase());
+                    setKeyManuallyEdited(true);
+                  }}
+                  maxLength={10}
+                  placeholder="KEY"
+                  className="w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm text-text-1 placeholder:text-text-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {keyError && <p className="mt-1 text-xs text-rose-500">{keyError}</p>}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-between">
+              <button
+                type="button"
+                onClick={() => navigate(`/w/${workspaceSlug}`, { replace: true })}
+                className="text-sm text-text-2 hover:text-text-1"
+              >
+                Bỏ qua
+              </button>
+              <button
+                type="button"
+                onClick={() => createProjectMutation.mutate()}
+                disabled={!projectName.trim() || !!keyError || createProjectMutation.isPending}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {createProjectMutation.isPending ? "Đang tạo…" : "Tạo →"}
+              </button>
+            </div>
+          </>
+        ) : step === 1 ? (
           <>
             <h1 className="text-xl font-bold text-text-1">Tạo workspace mới</h1>
             <p className="mt-1 mb-6 text-sm text-text-2">Nơi team của bạn cộng tác</p>
