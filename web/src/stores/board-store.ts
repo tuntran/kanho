@@ -8,15 +8,22 @@ interface OpSnapshot {
   prevCardsByColumn: Record<string, string[]>;
 }
 
+interface ActiveFilters {
+  labelIds: string[];
+  showArchived: boolean;
+}
+
 interface BoardState {
   boardId: string | null;
   board: Board | null;
   columns: Column[];
   cards: Record<string, Card>;
   cardsByColumn: Record<string, string[]>;
+  archivedCards: Record<string, Card>;
   pendingOps: Map<string, OpSnapshot>;
   processedEventIds: string[];
   wsConnected: boolean;
+  activeFilters: ActiveFilters;
 }
 
 interface BoardActions {
@@ -36,6 +43,9 @@ interface BoardActions {
   addColumn: (column: Column) => void;
   handleServerEvent: (event: WSEvent) => void;
   setWsConnected: (v: boolean) => void;
+  setLabelFilter: (labelIds: string[]) => void;
+  toggleShowArchived: () => void;
+  filteredCardsByColumn: () => Record<string, string[]>;
 }
 
 const BUFFER_MAX = 200;
@@ -68,12 +78,15 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   columns: [],
   cards: {},
   cardsByColumn: {},
+  archivedCards: {},
   pendingOps: new Map(),
   processedEventIds: [],
   wsConnected: false,
+  activeFilters: { labelIds: [], showArchived: false },
 
   initBoard: (board, columns, cards) => {
     const cardsMap: Record<string, Card> = {};
+    const archived: Record<string, Card> = {};
     const byColumn: Record<string, string[]> = {};
 
     for (const col of columns) {
@@ -81,7 +94,10 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
     }
 
     for (const card of cards) {
-      if (card.archived_at) continue;
+      if (card.archived_at) {
+        archived[card.id] = card;
+        continue;
+      }
       cardsMap[card.id] = card;
       if (!byColumn[card.column_id]) {
         byColumn[card.column_id] = [];
@@ -103,6 +119,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
       board,
       columns: sortedColumns,
       cards: cardsMap,
+      archivedCards: archived,
       cardsByColumn: byColumn,
       pendingOps: new Map(),
       processedEventIds: [],
@@ -116,9 +133,11 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
       columns: [],
       cards: {},
       cardsByColumn: {},
+      archivedCards: {},
       pendingOps: new Map(),
       processedEventIds: [],
       wsConnected: false,
+      activeFilters: { labelIds: [], showArchived: false },
     }),
 
   moveCardOptimistic: (cardId, toColumnId, afterCardId, beforeCardId) => {
@@ -282,4 +301,48 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   },
 
   setWsConnected: (v) => set({ wsConnected: v }),
+
+  setLabelFilter: (labelIds) =>
+    set((state) => ({
+      activeFilters: { ...state.activeFilters, labelIds },
+    })),
+
+  toggleShowArchived: () =>
+    set((state) => ({
+      activeFilters: {
+        ...state.activeFilters,
+        showArchived: !state.activeFilters.showArchived,
+      },
+    })),
+
+  filteredCardsByColumn: () => {
+    const state = get();
+    const { labelIds, showArchived } = state.activeFilters;
+    const result: Record<string, string[]> = {};
+
+    for (const [colId, ids] of Object.entries(state.cardsByColumn)) {
+      result[colId] = ids.filter((id) => {
+        const card = state.cards[id];
+        if (!card) return false;
+        if (labelIds.length > 0) {
+          const cardLabelIds = card.labels?.map((l) => l.id) ?? [];
+          if (!labelIds.some((lid) => cardLabelIds.includes(lid))) return false;
+        }
+        return true;
+      });
+    }
+
+    // Append archived cards when showArchived is true
+    if (showArchived) {
+      for (const card of Object.values(state.archivedCards)) {
+        const colId = card.column_id;
+        if (!result[colId]) result[colId] = [];
+        if (!result[colId].includes(card.id)) {
+          result[colId].push(card.id);
+        }
+      }
+    }
+
+    return result;
+  },
 }));

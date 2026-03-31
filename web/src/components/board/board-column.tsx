@@ -13,11 +13,14 @@ import { AddCardForm } from "@/components/board/add-card-form";
 
 interface BoardColumnProps {
   column: Column;
+  filteredCardIds?: string[];
 }
 
-export function BoardColumn({ column }: BoardColumnProps) {
+export function BoardColumn({ column, filteredCardIds }: BoardColumnProps) {
   const cards = useBoardStore((s) => s.cards);
-  const cardIds = useBoardStore((s) => s.cardsByColumn[column.id] ?? []);
+  const archivedCards = useBoardStore((s) => s.archivedCards);
+  const storeCardIds = useBoardStore((s) => s.cardsByColumn[column.id] ?? []);
+  const cardIds = filteredCardIds ?? storeCardIds;
   const boardId = useBoardStore((s) => s.boardId);
 
   const {
@@ -64,9 +67,17 @@ export function BoardColumn({ column }: BoardColumnProps) {
           strategy={verticalListSortingStrategy}
         >
           {cardIds.map((id) => {
-            const card = cards[id];
+            const card = cards[id] ?? archivedCards[id];
             if (!card) return null;
-            return <KanbanCard key={id} card={card} />;
+            const isArchived = !!card.archived_at;
+            return (
+              <div
+                key={id}
+                className={isArchived ? "opacity-50" : ""}
+              >
+                <KanbanCard card={card} isArchived={isArchived} />
+              </div>
+            );
           })}
         </SortableContext>
       </div>

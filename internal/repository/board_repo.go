@@ -77,6 +77,16 @@ func (r *BoardRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+// GetWorkspaceIDByBoardID returns the workspace ID for a given board via project join.
+func (r *BoardRepo) GetWorkspaceIDByBoardID(ctx context.Context, boardID uuid.UUID) (uuid.UUID, error) {
+	var workspaceID uuid.UUID
+	err := r.db.QueryRow(ctx,
+		`SELECT p.workspace_id FROM boards b JOIN projects p ON b.project_id = p.id WHERE b.id = $1`,
+		boardID,
+	).Scan(&workspaceID)
+	return workspaceID, err
+}
+
 func (r *BoardRepo) SlugExists(ctx context.Context, projectID uuid.UUID, slug string) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow(ctx,

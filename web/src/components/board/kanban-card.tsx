@@ -8,9 +8,10 @@ import { LabelChip } from "@/components/ui/label-chip";
 
 interface KanbanCardProps {
   card: Card;
+  isArchived?: boolean;
 }
 
-export function KanbanCard({ card }: KanbanCardProps) {
+export function KanbanCard({ card, isArchived }: KanbanCardProps) {
   const navigate = useNavigate();
   const { workspaceSlug, boardId } = useParams<{
     workspaceSlug: string;
@@ -82,7 +83,7 @@ export function KanbanCard({ card }: KanbanCardProps) {
       </div>
 
       {/* Title */}
-      <p className="mt-1.5 text-sm font-medium leading-snug text-text-1">
+      <p className={`mt-1.5 text-sm font-medium leading-snug text-text-1 ${isArchived ? "line-through" : ""}`}>
         {card.title}
       </p>
 

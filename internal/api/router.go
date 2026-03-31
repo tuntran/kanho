@@ -12,6 +12,7 @@ import (
 	mw "github.com/tungtran/kanho/internal/api/middleware"
 	"github.com/tungtran/kanho/internal/api/ws"
 	"github.com/tungtran/kanho/internal/config"
+	"github.com/tungtran/kanho/internal/domain"
 	"github.com/tungtran/kanho/internal/repository"
 	"github.com/tungtran/kanho/internal/service"
 	"github.com/tungtran/kanho/internal/storage"
@@ -135,10 +136,13 @@ func NewRouter(db *pgxpool.Pool, storageClient storage.Client, staticFS fs.FS, c
 
 				// Boards (direct access by ID)
 				r.Route("/boards/{boardID}", func(r chi.Router) {
+					r.Use(mw.BoardMiddleware(boardSvc, boardRepo, workspaceSvc))
 					r.Get("/", boardHandler.Get)
-					r.Patch("/", boardHandler.Update)
-					r.Delete("/", boardHandler.Delete)
-					r.Post("/columns", columnHandler.Create)
+					r.With(mw.RequireRole(domain.RoleAdmin)).Patch("/", boardHandler.Update)
+					r.With(mw.RequireRole(domain.RoleOwner)).Delete("/", boardHandler.Delete)
+
+					// Column create requires admin role
+					r.With(mw.RequireRole(domain.RoleAdmin)).Post("/columns", columnHandler.Create)
 
 					// Cards
 					r.Get("/cards", cardHandler.List)
@@ -174,7 +178,7 @@ func NewRouter(db *pgxpool.Pool, storageClient storage.Client, staticFS fs.FS, c
 					r.Delete("/", commentHandler.Delete)
 				})
 
-				// Columns (direct access by ID)
+				// Columns (direct access by ID — role enforced at board level for create)
 				r.Route("/columns", func(r chi.Router) {
 					r.Patch("/reorder", columnHandler.Reorder)
 					r.Route("/{columnID}", func(r chi.Router) {
