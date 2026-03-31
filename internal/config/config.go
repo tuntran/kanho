@@ -1,12 +1,10 @@
 package config
 
 import (
-	"log"
+	"strings"
 	"time"
 
-	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
@@ -41,12 +39,8 @@ type StorageConfig struct {
 	PublicURL string `koanf:"public_url"`
 }
 
-func Load(path string) (*Config, error) {
+func Load() (*Config, error) {
 	k := koanf.New(".")
-
-	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
-		log.Printf("config file %s not found, using env only: %v", path, err)
-	}
 
 	if err := k.Load(env.Provider("KANHO_", ".", func(s string) string {
 		return envToKoanfKey(s, "KANHO_")
@@ -76,15 +70,11 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// envToKoanfKey converts env var to koanf path.
+// Convention: __ = hierarchy separator (→ "."), _ = literal underscore in key name.
+// Example: KANHO_STORAGE__ACCESS_KEY → storage.access_key
 func envToKoanfKey(s string, prefix string) string {
-	key := s[len(prefix):]
-	result := make([]byte, 0, len(key))
-	for i := 0; i < len(key); i++ {
-		if key[i] == '_' {
-			result = append(result, '.')
-		} else {
-			result = append(result, key[i]+'a'-'A')
-		}
-	}
-	return string(result)
+	key := strings.TrimPrefix(s, prefix)
+	key = strings.ToLower(key)
+	return strings.ReplaceAll(key, "__", ".")
 }
