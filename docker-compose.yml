@@ -40,11 +40,32 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_CORS_ALLOW_ORIGIN: "*"
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-}
     volumes:
       - minio_data:/data
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # One-time init: create bucket and set public read policy
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: |
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin} &&
+        mc mb --ignore-existing local/$${KANHO_STORAGE_BUCKET:-kanho} &&
+        mc anonymous set download local/$${KANHO_STORAGE_BUCKET:-kanho} &&
+        echo 'minio-init: bucket ready'
+      "
+    restart: on-failure
 
 volumes:
   postgres_data:
