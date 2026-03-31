@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS card_labels;
+DROP TABLE IF EXISTS labels;
+DROP TABLE IF EXISTS card_assignees;

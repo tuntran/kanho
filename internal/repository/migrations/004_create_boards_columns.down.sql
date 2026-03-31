@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS columns;
+DROP TABLE IF EXISTS boards;

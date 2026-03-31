@@ -1,0 +1,1358 @@
+openapi: "3.0.3"
+info:
+  title: Kanho API
+  description: Kanban project management API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [system]
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /auth/register:
+    post:
+      operationId: register
+      summary: Register new user
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/login:
+    post:
+      operationId: login
+      summary: Login
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh access token
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Logout
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      summary: Get current user
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /workspaces:
+    get:
+      operationId: listWorkspaces
+      summary: List user workspaces
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Workspace list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+    post:
+      operationId: createWorkspace
+      summary: Create workspace
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+
+  /workspaces/{slug}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      operationId: getWorkspace
+      summary: Get workspace by slug
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Workspace detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+    patch:
+      operationId: updateWorkspace
+      summary: Update workspace
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkspaceRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+    delete:
+      operationId: deleteWorkspace
+      summary: Delete workspace
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /workspaces/{slug}/members:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      operationId: listWorkspaceMembers
+      summary: List workspace members
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceMember"
+    post:
+      operationId: inviteWorkspaceMember
+      summary: Invite member
+      tags: [workspaces]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteMemberRequest"
+      responses:
+        "201":
+          description: Invited
+
+  /workspaces/{slug}/projects:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      operationId: listProjects
+      summary: List projects in workspace
+      tags: [projects]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Project list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      summary: Create project
+      tags: [projects]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /workspaces/{slug}/labels:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      operationId: listLabels
+      summary: List workspace labels
+      tags: [labels]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Label"
+    post:
+      operationId: createLabel
+      summary: Create label
+      tags: [labels]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLabelRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+
+  /labels/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    patch:
+      operationId: updateLabel
+      summary: Update label
+      tags: [labels]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLabelRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Label"
+    delete:
+      operationId: deleteLabel
+      summary: Delete label
+      tags: [labels]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /boards/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: getBoard
+      summary: Get board with columns and cards
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Board state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardState"
+    patch:
+      operationId: updateBoard
+      summary: Update board
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBoardRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Board"
+
+  /boards/{id}/columns:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: createColumn
+      summary: Create column
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateColumnRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+
+  /boards/{id}/cards:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: listCards
+      summary: List cards in board
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: column_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: priority
+          in: query
+          schema:
+            $ref: "#/components/schemas/Priority"
+        - name: assignee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Card"
+    post:
+      operationId: createCard
+      summary: Create card
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCardRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /boards/{id}/ws:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: boardWebSocket
+      summary: WebSocket connection for board real-time updates
+      tags: [websocket]
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "101":
+          description: WebSocket upgrade
+
+  /columns/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    patch:
+      operationId: updateColumn
+      summary: Update column
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateColumnRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Column"
+    delete:
+      operationId: deleteColumn
+      summary: Delete column
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /columns/reorder:
+    patch:
+      operationId: reorderColumns
+      summary: Reorder columns
+      tags: [boards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderColumnsRequest"
+      responses:
+        "204":
+          description: Reordered
+
+  /cards/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: getCard
+      summary: Get card detail
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Card detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardDetail"
+    patch:
+      operationId: updateCard
+      summary: Update card fields
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCardRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+    delete:
+      operationId: deleteCard
+      summary: Delete card permanently
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /cards/{id}/move:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: moveCard
+      summary: Move card to column + position
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveCardRequest"
+      responses:
+        "200":
+          description: Moved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /cards/{id}/archive:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: archiveCard
+      summary: Archive card
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Archived
+
+  /cards/{id}/comments:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: listComments
+      summary: List card comments
+      tags: [comments]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      summary: Add comment
+      tags: [comments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /cards/{id}/activity:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: listCardActivity
+      summary: Card activity log
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
+  /cards/{id}/attachments:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: registerAttachment
+      summary: Register uploaded attachment
+      tags: [attachments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAttachmentRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attachment"
+
+  /attachments/presign:
+    post:
+      operationId: presignUpload
+      summary: Get presigned upload URL
+      tags: [attachments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresignRequest"
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresignResponse"
+
+  /search/cards:
+    get:
+      operationId: searchCards
+      summary: Full-text search cards
+      tags: [cards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: workspace_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Card"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    WorkspaceSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        db:
+          type: string
+        storage:
+          type: string
+
+    Priority:
+      type: string
+      enum: [none, low, medium, high, urgent]
+
+    Visibility:
+      type: string
+      enum: [private, workspace]
+
+    Role:
+      type: string
+      enum: [owner, admin, member]
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [access_token, refresh_token, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, email, name, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        avatar_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      required: [id, name, slug, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logo_url:
+          type: string
+        accent_color:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    CreateWorkspaceRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        accent_color:
+          type: string
+
+    WorkspaceMember:
+      type: object
+      required: [user_id, role, created_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        user:
+          $ref: "#/components/schemas/User"
+        role:
+          $ref: "#/components/schemas/Role"
+        created_at:
+          type: string
+          format: date-time
+
+    InviteMemberRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/Role"
+
+    Project:
+      type: object
+      required: [id, workspace_id, name, key, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateProjectRequest:
+      type: object
+      required: [name, key]
+      properties:
+        name:
+          type: string
+        key:
+          type: string
+          pattern: "^[A-Z]{2,10}$"
+
+    Board:
+      type: object
+      required: [id, project_id, name, slug, visibility, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        visibility:
+          $ref: "#/components/schemas/Visibility"
+        created_at:
+          type: string
+          format: date-time
+
+    BoardState:
+      type: object
+      required: [board, columns]
+      properties:
+        board:
+          $ref: "#/components/schemas/Board"
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnWithCards"
+
+    ColumnWithCards:
+      type: object
+      required: [column, cards]
+      properties:
+        column:
+          $ref: "#/components/schemas/Column"
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+
+    UpdateBoardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        visibility:
+          $ref: "#/components/schemas/Visibility"
+
+    Column:
+      type: object
+      required: [id, board_id, name, position, is_done, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        position:
+          type: string
+        color:
+          type: string
+        wip_limit:
+          type: integer
+        is_done:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateColumnRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        wip_limit:
+          type: integer
+        is_done:
+          type: boolean
+
+    UpdateColumnRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        wip_limit:
+          type: integer
+        is_done:
+          type: boolean
+
+    ReorderColumnsRequest:
+      type: object
+      required: [board_id, column_positions]
+      properties:
+        board_id:
+          type: string
+          format: uuid
+        column_positions:
+          type: array
+          items:
+            type: object
+            required: [id, position]
+            properties:
+              id:
+                type: string
+                format: uuid
+              position:
+                type: string
+
+    Card:
+      type: object
+      required: [id, project_id, board_id, column_id, card_number, title, priority, position, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+        column_id:
+          type: string
+          format: uuid
+        card_number:
+          type: integer
+        readable_id:
+          type: string
+          description: "e.g. PROJ-42"
+        title:
+          type: string
+        priority:
+          $ref: "#/components/schemas/Priority"
+        position:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        due_date:
+          type: string
+          format: date-time
+        archived_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        assignees:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/Label"
+
+    CardDetail:
+      allOf:
+        - $ref: "#/components/schemas/Card"
+        - type: object
+          properties:
+            description:
+              type: string
+            description_json:
+              type: object
+            comments:
+              type: array
+              items:
+                $ref: "#/components/schemas/Comment"
+            attachments:
+              type: array
+              items:
+                $ref: "#/components/schemas/Attachment"
+
+    CreateCardRequest:
+      type: object
+      required: [column_id, title]
+      properties:
+        column_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          $ref: "#/components/schemas/Priority"
+        assignee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateCardRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        description_json:
+          type: object
+        priority:
+          $ref: "#/components/schemas/Priority"
+        start_date:
+          type: string
+          format: date-time
+        due_date:
+          type: string
+          format: date-time
+        assignee_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    MoveCardRequest:
+      type: object
+      required: [column_id, position]
+      properties:
+        column_id:
+          type: string
+          format: uuid
+        position:
+          type: string
+
+    Comment:
+      type: object
+      required: [id, card_id, author_id, content, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        author:
+          $ref: "#/components/schemas/User"
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        content_json:
+          type: object
+
+    Attachment:
+      type: object
+      required: [id, card_id, filename, content_type, size_bytes, storage_key, uploaded_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        card_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        storage_key:
+          type: string
+        url:
+          type: string
+        uploaded_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    RegisterAttachmentRequest:
+      type: object
+      required: [filename, content_type, size_bytes, storage_key]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        storage_key:
+          type: string
+
+    PresignRequest:
+      type: object
+      required: [filename, content_type]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+
+    PresignResponse:
+      type: object
+      required: [presigned_url, storage_key, public_url]
+      properties:
+        presigned_url:
+          type: string
+        storage_key:
+          type: string
+        public_url:
+          type: string
+
+    Label:
+      type: object
+      required: [id, workspace_id, name, color, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateLabelRequest:
+      type: object
+      required: [name, color]
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+
+    UpdateLabelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+
+    Activity:
+      type: object
+      required: [id, workspace_id, actor_id, action, target_type, target_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        actor:
+          $ref: "#/components/schemas/User"
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+          format: uuid
+        data:
+          type: object
+        created_at:
+          type: string
+          format: date-time
